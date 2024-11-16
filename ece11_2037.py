@@ -1,15 +1,15 @@
 import numpy as np
-import Elements.pyECSS.math_utilities as util
-from Elements.pyECSS.Entity import Entity
-from Elements.pyECSS.Component import BasicTransform, Camera, RenderMesh
-from Elements.pyECSS.System import TransformSystem, CameraSystem
-from Elements.pyGLV.GL.Scene import Scene
-from Elements.pyGLV.GUI.Viewer import RenderGLStateSystem
-from Elements.pyGLV.GUI.ImguiDecorator import ImGUIecssDecorator2
-from Elements.pyGLV.GL.Shader import (InitGLShaderSystem, Shader, ShaderGLDecorator, RenderGLShaderSystem)
-from Elements.pyGLV.GL.VertexArray import VertexArray
-from Elements.utils.terrain import generateTerrain
 from OpenGL.GL import GL_LINES
+from Elements.pyGLV.GL.Scene import Scene
+from Elements.pyECSS.Entity import Entity
+import Elements.pyECSS.math_utilities as util
+from Elements.utils.terrain import generateTerrain
+from Elements.pyGLV.GL.VertexArray import VertexArray
+from Elements.pyGLV.GUI.Viewer import RenderGLStateSystem
+from Elements.pyECSS.System import TransformSystem, CameraSystem
+from Elements.pyGLV.GUI.ImguiDecorator import ImGUIecssDecorator2
+from Elements.pyECSS.Component import BasicTransform, Camera, RenderMesh
+from Elements.pyGLV.GL.Shader import (InitGLShaderSystem, Shader, ShaderGLDecorator, RenderGLShaderSystem)
 from Elements.utils.Shortcuts import displayGUI_text
 example_description = "This is a sphere."
 
@@ -46,11 +46,12 @@ indices = []
 normals = []
 
 k = 30
+radius = 1 # Για να ρυθμίζουμε την ακτίνα.
 for i in range(0, k):
     for j in range(0, k):
-        x = np.cos(2 * np.pi * j / k) * np.sin(np.pi * i / k)
-        y = np.cos(np.pi * i / k)
-        z = np.sin(2 * np.pi * j / k) * np.sin(np.pi * i / k)
+        x = radius* np.cos(2 * np.pi * j / k) * np.sin(np.pi * i / k)
+        y = radius* np.cos(np.pi * i / k)
+        z = radius* np.sin(2 * np.pi * j / k) * np.sin(np.pi * i / k)
         vertices.append([x, y, z, 1.0])
         indices.append(i * k + j)
         indices.append((i + 1) * k + j)
@@ -58,20 +59,22 @@ for i in range(0, k):
         indices.append(i * k + j)
         indices.append((i + 1) * k + (j + 1) % k)
         indices.append(i * k + (j + 1) % k)
+        normals.append([x, y, z, 1.0])
         #Α) Να υλοποιήστε μια σκηνή που θα περιέχει μία σφαίρα. Πατώντας το wireframe checkbox θα εμφανίζονται μόνο οι ακμές/κορυφές της.
-
-        # colors.append(initiallcolor); 
+        ##########
+        colors.append(initiallcolor); 
         
         # Β) Να υλοποιήστε μία σκηνή που θα περιέχει 1 σφαίρα με διαφορετική ακτίνα και διαφορετικό πλήθος κορυφών/ακμών,
         # της οποίας το χρώμα θα αλλάζει ανάλογα με το ύψος (συντεταγμένη y) κάθε κορυφής (πχ. ξεκινώντας από την κορυφή της σφαίρας με κόκκινο και καταλήγοντας στη βάση
         # της σφαίρας σε κίτρινο).
+        ##########
+        #colors.append([1.0,-y,0.0]);
 
-        # colors.append([1.0,-y,0.0]);
-
-        normals.append([x, y, z, 1.0])
-        colors = normals
+        # Γ) Να υλοποιήστε μία σκηνή που θα περιέχει 1 σφαίρα με διαφορετική ακτίνα και διαφορετικό
+        # πλήθος κορυφών/ακμών, της οποίας το χρώμα σε κάθε κορυφή να ισούται με το normal σε αυτή την κορυφή.
+        ##########
+        #colors = normals
       
-
 # Systems
 transUpdate = scene.world.createSystem(TransformSystem("transUpdate", "TransformSystem", "001"))
 camUpdate = scene.world.createSystem(CameraSystem("camUpdate", "CameraUpdate", "200"))
