@@ -1,11 +1,13 @@
 
 import os
 import numpy as np
+from OpenGL.GL import GL_LINES
 import Elements.utils.normals as norm
 from Elements.pyECSS.Entity import Entity
 from Elements.pyGLV.GL.Scene import Scene
 from Elements.definitions import TEXTURE_DIR
 import Elements.pyECSS.math_utilities as util
+from Elements.pyGLV.GL.Textures import Texture
 from Elements.pyGLV.GL.VertexArray import VertexArray
 from Elements.pyGLV.GL.Textures import get_texture_faces
 from Elements.pyGLV.GUI.Viewer import RenderGLStateSystem
@@ -16,12 +18,6 @@ from Elements.pyECSS.Component import BasicTransform, Camera, RenderMesh
 from Elements.pyGLV.GL.Shader import InitGLShaderSystem, Shader, ShaderGLDecorator, RenderGLShaderSystem
 from Elements.utils.Shortcuts import displayGUI_text
 example_description = """This is earth."""
-
-#Light
-Lposition = util.vec(-1, 1.5, 1.2) #uniform lightpos
-Lambientcolor = util.vec(1.0, 1.0, 1.0) #uniform ambient color
-Lcolor = util.vec(1.0,1.0,1.0)
-Lintensity = 40.0
 
 # Scene
 winWidth = 1024
@@ -40,8 +36,8 @@ meshSkybox = scene.world.addComponent(skybox, RenderMesh(name="meshSkybox"))
 #Sphere
 sphere = scene.world.createEntity(Entity(name="sphere"))
 scene.world.addEntityChild(rootEntity, sphere)
-transSphere = scene.world.addComponent(sphere, BasicTransform(name="transSphere", trs=util.identity())) 
-meshSphere = scene.world.addComponent(sphere, RenderMesh(name="meshSphere"))
+transSphere = scene.world.addComponent(sphere, BasicTransform(name="trans4", trs=util.translate(0,0.5,0))) #util.identity()
+meshSphere = scene.world.addComponent(sphere, RenderMesh(name="mesh4"))
 
 # Skybox from here
 minbox = -30
@@ -65,7 +61,7 @@ indexSkybox = np.array((1, 0, 3, 1, 3, 2,
                   5, 4, 0, 5, 0, 1), np.uint32)
 # Skybox till here
 
-# Cube vertex and UV generation
+# Sphere from here
 VerticesSphere = []
 IndicesSphere = []
 NormalsSpheres = []
@@ -76,7 +72,7 @@ radius = 1  # Adjust radius if needed
 for i in range(k):
     for j in range(k):
         x = radius * np.cos(2 * np.pi * j / k) * np.sin(np.pi * i / k)
-        y = radius * np.cos(np.pi * i / k)
+        y = -(radius * np.cos(np.pi * i / k))
         z = radius * np.sin(2 * np.pi * j / k) * np.sin(np.pi * i / k)
         VerticesSphere.append([x, y, z, 1.0])
         IndicesSphere.append(i * k + j)
@@ -89,44 +85,38 @@ for i in range(k):
         u = j / k
         v = i / k
         uvs.append([u, v])
-
+# Sphere till here
 
 # Systems
 transUpdate = scene.world.createSystem(TransformSystem("transUpdate", "TransformSystem", "001"))
 renderUpdate = scene.world.createSystem(RenderGLShaderSystem())
 initUpdate = scene.world.createSystem(InitGLShaderSystem())
 
-vertexSkybox, indexSkybox, _ = norm.generateUniqueVertices(vertexSkybox, indexSkybox)
-
-
 # Set up Skybox with UVs and Mesh
 meshSkybox.vertex_attributes.append(vertexSkybox)
 meshSkybox.vertex_index.append(indexSkybox)
 vArraySkybox = scene.world.addComponent(skybox, VertexArray())
 shaderSkybox = scene.world.addComponent(skybox, ShaderGLDecorator(Shader(vertex_source=Shader.STATIC_SKYBOX_VERT, fragment_source=Shader.STATIC_SKYBOX_FRAG)))
+vertexSkybox, indexSkybox, _ = norm.generateUniqueVertices(vertexSkybox, indexSkybox)
 
 # Set up Cube with UVs and Mesh
 meshSphere.vertex_attributes.append(VerticesSphere)
 meshSphere.vertex_attributes.append(uvs)
 meshSphere.vertex_index.append(IndicesSphere)
-vArray4 = scene.world.addComponent(sphere, VertexArray())
-shaderDec4 = scene.world.addComponent(sphere, ShaderGLDecorator(Shader(vertex_source=Shader.TEXTURE_3D_VERT, fragment_source=Shader.TEXTURE_3D_FRAG)))
+meshSphere.vertex_attributes.append(Texture.CUBE_TEX_COORDINATES)
+vArraySphere = scene.world.addComponent(sphere, VertexArray())
+shaderDecSphere = scene.world.addComponent(sphere, ShaderGLDecorator(Shader(vertex_source = Shader.SIMPLE_TEXTURE_VERT, fragment_source=Shader.SIMPLE_TEXTURE_FRAG)))
 
 # MAIN RENDERING LOOP
 running = True
 scene.init(imgui=True, windowWidth=winWidth, windowHeight=winHeight, windowTitle="Elements: Cube Mapping Example", customImGUIdecorator=ImGUIecssDecorator2, openGLversion=4)
-
-# Pre-pass scenegraph to initialize all GL context dependent geometry, shader classes
 scene.world.traverse_visit(initUpdate, scene.world.root)
 
 ################### EVENT MANAGER ###################
-
 eManager = scene.world.eventManager
 gWindow = scene.renderWindow
 gGUI = scene.gContext
-
 renderGLEventActuator = RenderGLStateSystem()
-
 eManager._subscribers['OnUpdateWireframe'] = gWindow
 eManager._actuators['OnUpdateWireframe'] = renderGLEventActuator
 eManager._subscribers['OnUpdateCamera'] = gWindow 
@@ -139,7 +129,7 @@ view = util.lookat(eye, target, up)
 projMat = util.perspective(50.0, 1.0, 0.01, 100.0)   
 gWindow._myCamera = view
 
-# Load the skybox textures (cube map faces)
+# Load skybox textures 
 skybox_texture_locations = TEXTURE_DIR / "Stars"
 front_img = skybox_texture_locations / "front.png"
 right_img = skybox_texture_locations / "right.png"
@@ -147,41 +137,30 @@ left_img = skybox_texture_locations / "left.png"
 back_img = skybox_texture_locations / "back.png"
 bottom_img = skybox_texture_locations / "bottom.png"
 top_img = skybox_texture_locations / "top.png"
-
-# Load cube map textures for the skybox
 face_data = get_texture_faces(front_img, back_img, top_img, bottom_img, left_img, right_img)
-
-# Apply cube map texture to the skybox shader
 shaderSkybox.setUniformVariable(key='cubemap', value=face_data, texture3D=True)
 
 
-# Load Earth texture for the sphere (single texture)
-mat_img = TEXTURE_DIR / "earth.jpg"
-face_data_2 = get_single_texture_faces(mat_img)
+model_sphere = transSphere.trs
+texturePath = TEXTURE_DIR / "earth.jpg"
+texture = Texture(texturePath)
+shaderDecSphere.setUniformVariable(key='ImageTexture', value=texture, texture=True)
 
-# Apply Earth texture to the sphere shader
-shaderDec4.setUniformVariable(key='cubemap', value=face_data_2, texture3D=False)
-
-
-# MAIN RENDERING LOOP
 while running:
     running = scene.render()
     displayGUI_text(example_description)
+    scene.world.traverse_visit(renderUpdate, scene.world.root)
     scene.world.traverse_visit(transUpdate, scene.world.root)
+    
+    view =  gWindow._myCamera # updates view via the imgui
+    model_cube = transSphere.l2world
+    shaderDecSphere.setUniformVariable(key='model', value=model_sphere, mat4=True)
+    shaderDecSphere.setUniformVariable(key='View', value=view, mat4=True)
+    shaderDecSphere.setUniformVariable(key='Proj', value=projMat, mat4=True)
 
-    view = gWindow._myCamera
-
-    # Apply the projection and view matrices for the sphere (Earth texture)
-    shaderDec4.setUniformVariable(key='Proj', value=projMat, mat4=True)
-    shaderDec4.setUniformVariable(key='View', value=view, mat4=True)
-    shaderDec4.setUniformVariable(key='model', value=transSphere.l2world, mat4=True)  # Model matrix for Earth
-
-    # Apply the projection and view matrices for the skybox (Cube map)
     shaderSkybox.setUniformVariable(key='Proj', value=projMat, mat4=True)
     shaderSkybox.setUniformVariable(key='View', value=view, mat4=True)
 
-    # Traverse the scene graph and render the sphere with the Earth texture
-    scene.world.traverse_visit(renderUpdate, scene.world.root)
-
-    # After rendering the sphere, render the skybox (with the cube map)
     scene.render_post()
+    
+scene.shutdown()
