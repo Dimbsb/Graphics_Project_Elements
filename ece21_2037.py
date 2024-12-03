@@ -1,6 +1,7 @@
 
 import os
 import numpy as np
+
 import OpenGL.GL as gl
 from OpenGL.GL import GL_LINES
 import Elements.utils.normals as norm
@@ -34,7 +35,10 @@ Lintensity = 1.0
 MshininessFirstcube = 0.0
 MshininessSecondcube = 0.0
 MshininessPyramid = 0.0
-Mcolor = util.vec(1, 1, 1)
+
+McolorFirstcube = [1, 1, 0] 
+McolorSecondcube = [1, 0, 1]
+McolorPyramid = [0, 0, 1]
 
 #Scene
 winWidth = 1200
@@ -78,25 +82,25 @@ vertexCube = np.array([
 ], dtype=np.float32)
 
 colorCube = np.array([
-    [0.2, 0.8, 0.1, 1.0],  
-    [0.2, 0.8, 0.1, 1.0],
-    [0.2, 0.8, 0.1, 1.0],
-    [0.2, 0.8, 0.1, 1.0],
-    [0.2, 0.8, 0.1, 1.0],
-    [0.2, 0.8, 0.1, 1.0],
-    [0.2, 0.8, 0.1, 1.0],
-    [0.2, 0.8, 0.1, 1.0],
+    [1.0, 1.0, 0.0, 1.0],  
+    [1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
 ], dtype=np.float32)
 
 colorCube2 = np.array([
-    [0.8, 0.0, 0.8, 1.0],  
-    [0.8, 0.0, 0.8, 1.0],
-    [0.8, 0.0, 0.8, 1.0],
-    [0.8, 0.0, 0.8, 1.0],
-    [0.8, 0.0, 0.8, 1.0],
-    [0.8, 0.0, 0.8, 1.0],
-    [0.8, 0.0, 0.8, 1.0],
-    [0.8, 0.0, 0.8, 1.0],
+    [1.0, 0.0, 1.0, 1.0],  
+    [1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 1.0, 1.0],
 ], dtype=np.float32)
 
 indexCube = np.array([
@@ -126,11 +130,11 @@ indexPyramid = np.array([
 ], dtype=np.uint32)
 
 colorPyramid = np.array([
-    [0.0, 0.2, 0.8, 1.0],  
-    [0.0, 0.2, 0.8, 1.0],  
-    [0.0, 0.2, 0.8, 1.0],  
-    [0.0, 0.2, 0.8, 1.0],  
-    [0.0, 0.2, 0.8, 1.0],  
+    [0.0, 0.0, 1.0, 1.0],  
+    [0.0, 0.0, 1.0, 1.0],  
+    [0.0, 0.0, 1.0, 1.0],  
+    [0.0, 0.0, 1.0, 1.0],  
+    [0.0, 0.0, 1.0, 1.0],  
 ], dtype=np.float32)
 
 # A simple Pyramid till here 
@@ -141,9 +145,9 @@ renderUpdate = scene.world.createSystem(RenderGLShaderSystem())
 initUpdate = scene.world.createSystem(InitGLShaderSystem())
 
 #Vertices from here
-verticesFirstcube, indicesFirstcube, colorsFirstcube, normalsFirstcube = norm.generateSmoothNormalsMesh(vertexCube , indexCube, colorCube)
-verticesSecondcube, indicesSecondcube, colorsSecondcube, normalsSecondcube = norm.generateSmoothNormalsMesh(vertexCube , indexCube, colorCube2)
-verticesPyramid, indicesPyramid, colorsPyramid, normalsPyramid = norm.generateSmoothNormalsMesh(vertexPyramid , indexPyramid, colorPyramid)
+verticesFirstcube, indicesFirstcube, colorsFirstcube, normalsFirstcube = norm.generateSmoothNormalsMesh(vertexCube , indexCube, colorCube) #generateFlatNormalsMesh
+verticesSecondcube, indicesSecondcube, colorsSecondcube, normalsSecondcube = norm.generateSmoothNormalsMesh(vertexCube , indexCube, colorCube2) #generateFlatNormalsMesh
+verticesPyramid, indicesPyramid, colorsPyramid, normalsPyramid = norm.generateSmoothNormalsMesh(vertexPyramid , indexPyramid, colorPyramid) #generateFlatNormalsMesh
 #Vertices till here
 
 #first cube from here
@@ -195,30 +199,26 @@ projMat = util.perspective(50.0, winWidth/winHeight, 0.01, 100.0)
 gWindow._myCamera = view 
 model_cube = util.scale(1.0) @ util.translate(0.0,0.5,0.0)
 
+#Imgui from here
+def MyImgui(McolorFirstcube,McolorSecondcube,McolorPyramid,Lposition,Lcolor,Lambientcolor,Lintensity,Lambientstr,MshininessFirstcube,MshininessSecondcube,MshininessPyramid):
 
-#Main loop
-while running:
-    running = scene.render()
-    displayGUI_text(example_description)
-
-    #Imgui from here
     imgui.begin("COLOR-LIGHT-IMGUI")
 
     # Color controls from here
-    changed_colorCube1, new_colorCube1 = imgui.drag_float3("Cube 1 Color", *colorCube[0][:3], min_value=0.0, max_value=255.0)
+    changed_colorCube1, new_colorCube1 = imgui.drag_float3("Cube 1 Color", *McolorFirstcube, min_value=0.0, max_value=255.0)
     if changed_colorCube1:
-        colorCube[0][:3] = new_colorCube1 
-        shaderDecFirstCube.setUniformVariable(key='matColor', value=colorCube[0][:3] / 255.0, float3=True)
+        McolorFirstcube = new_colorCube1 
+        shaderDecFirstCube.setUniformVariable(key='matColor', value=McolorFirstcube , float3=True)
 
-    changed_colorCube2, new_colorCube2 = imgui.drag_float3("Cube 2 Color", *colorCube2[0][:3], min_value=0.0, max_value=255.0)
+    changed_colorCube2, new_colorCube2 = imgui.drag_float3("Cube 2 Color", *McolorSecondcube, min_value=0.0, max_value=255.0)
     if changed_colorCube2:
-        colorCube2[0][:3] = new_colorCube2  
-        shaderDecSecondCube.setUniformVariable(key='matColor', value=colorCube2[0][:3] / 255.0, float3=True)
+        McolorSecondcube = new_colorCube2  
+        shaderDecSecondCube.setUniformVariable(key='matColor', value=McolorSecondcube , float3=True)
 
-    changed_colorPyramid, new_colorPyramid = imgui.drag_float3("Pyramid Color", *colorPyramid[0][:3], min_value=0.0, max_value=255.0)
+    changed_colorPyramid, new_colorPyramid = imgui.drag_float3("Pyramid Color", *McolorPyramid, min_value=0.0, max_value=255.0)
     if changed_colorPyramid:
-        colorPyramid[0][:3] = new_colorPyramid 
-        shaderDecPyramid.setUniformVariable(key='matColor', value=colorPyramid[0][:3] / 255.0, float3=True)
+        McolorPyramid = new_colorPyramid 
+        shaderDecPyramid.setUniformVariable(key='matColor', value=McolorPyramid , float3=True)
     # Color controls till here
 
     # Light Position Control from here
@@ -269,7 +269,17 @@ while running:
     # Shininess control till here
 
     imgui.end()
-    #Imgui till here
+    
+    return (McolorFirstcube,McolorSecondcube,McolorPyramid,Lposition,Lcolor,Lambientcolor,Lintensity,Lambientstr,MshininessFirstcube,MshininessSecondcube,MshininessPyramid)
+#Imgui till here
+
+#Main loop
+while running:
+    running = scene.render()
+    displayGUI_text(example_description)
+
+    McolorFirstcube,McolorSecondcube,McolorPyramid,Lposition,Lcolor,Lambientcolor,Lintensity,Lambientstr,MshininessFirstcube,MshininessSecondcube,MshininessPyramid = MyImgui(
+        McolorFirstcube,McolorSecondcube,McolorPyramid,Lposition,Lcolor,Lambientcolor,Lintensity,Lambientstr,MshininessFirstcube,MshininessSecondcube,MshininessPyramid)
 
     mvp_cube = projMat @ view @ transFirstCube.l2world
     mvp_cube2 = projMat @ view @ transSecondCube.l2world
@@ -288,7 +298,7 @@ while running:
     shaderDecFirstCube.setUniformVariable(key='lightColor', value=Lcolor, float3=True)
     shaderDecFirstCube.setUniformVariable(key='lightIntensity', value=Lintensity, float1=True)
     shaderDecFirstCube.setUniformVariable(key='shininess', value=MshininessFirstcube, float1=True)
-    shaderDecFirstCube.setUniformVariable(key='matColor', value=colorCube[0][:3], float3=True)
+    shaderDecFirstCube.setUniformVariable(key='matColor', value=McolorFirstcube, float3=True)
 
     shaderDecSecondCube.setUniformVariable(key='model', value=model_cube, mat4=True)
     shaderDecSecondCube.setUniformVariable(key='modelViewProj', value=mvp_cube2, mat4=True)
@@ -300,7 +310,7 @@ while running:
     shaderDecSecondCube.setUniformVariable(key='lightColor', value=Lcolor, float3=True)
     shaderDecSecondCube.setUniformVariable(key='lightIntensity', value=Lintensity, float1=True)
     shaderDecSecondCube.setUniformVariable(key='shininess', value=MshininessSecondcube, float1=True)
-    shaderDecSecondCube.setUniformVariable(key='matColor', value=colorCube2[0][:3], float3=True) 
+    shaderDecSecondCube.setUniformVariable(key='matColor', value=McolorSecondcube, float3=True) 
 
     shaderDecPyramid.setUniformVariable(key='model', value=model_cube, mat4=True)
     shaderDecPyramid.setUniformVariable(key='modelViewProj', value=mvp_pyramid, mat4=True)
@@ -312,7 +322,7 @@ while running:
     shaderDecPyramid.setUniformVariable(key='lightColor', value=Lcolor, float3=True)
     shaderDecPyramid.setUniformVariable(key='lightIntensity', value=Lintensity, float1=True)
     shaderDecPyramid.setUniformVariable(key='shininess', value=MshininessPyramid, float1=True)
-    shaderDecPyramid.setUniformVariable(key='matColor', value=colorPyramid[0][:3], float3=True) 
+    shaderDecPyramid.setUniformVariable(key='matColor', value=McolorPyramid, float3=True) 
 
     scene.render_post()
 
